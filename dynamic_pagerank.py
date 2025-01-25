@@ -1,155 +1,111 @@
 import random
-import numpy as np
 import logging
 
-class DynamicPageRank:
-    """
-    An advanced web crawler that dynamically optimizes page ranking using Q-learning.
-    It applies deep reinforcement learning principles to adjust the page rankings based on web exploration.
-    Emphasizes best practices for code maintainability, efficiency, and readability.
-    
-    Developed by: Gazi P0ll0B Hussain (G|I|X)
-    """
+# Constants that guide us through the cosmos of learning—these are the celestial forces shaping our destiny. 🌌✨
+LEARNING_RATE = 0.1  # The speed of our enlightenment, the energy that propels us toward infinite knowledge! 🚀
+DISCOUNT_FACTOR = 0.9  # A gravitational force that pulls us to the future—decisions made today shape the reality of tomorrow. 🌠
+EXPLORATION_RATE = 1.0  # The endless curiosity of the explorer, always yearning for uncharted realms and new frontiers! 🌍
+DECAY_RATE = 0.995  # The evolution from discovery to mastery—like a comet that slowly refines its path, becoming ever more precise. 🌙
+REWARD_RANGE = (0, 1)  # The glimmer of recognition in the vast, uncharted universe of knowledge—each reward a spark of affirmation! 🌟
 
-    def __init__(self, pages=None, links=None, alpha=0.1, gamma=0.9, epsilon=0.1, decay_rate=0.995):
-        """
-        Initializes the DynamicPageRank class with pages and links to simulate dynamic crawling and ranking.
+# Initialize Q-values—each page is a beacon, a shining star that lights the way to new possibilities. 🌟
+Q_VALUES = {}
 
-        :param pages: List of page URLs (default: empty list)
-        :param links: Dictionary of links between pages (default: empty dict)
-        :param alpha: Learning rate (default 0.1)
-        :param gamma: Discount factor (default 0.9)
-        :param epsilon: Exploration rate (default 0.1)
-        :param decay_rate: Rate at which epsilon (exploration) decays over time (default 0.995)
-        """
-        self.pages = pages or []  # List of pages to crawl
-        self.links = links or {}  # Links between pages
-        self.q_values = {page: 0 for page in self.pages}  # Initialize Q-values to 0 for all pages
+# Crawled pages and their links—every link, a star system waiting to be explored, a connection to new worlds beyond! 🌌✨
+crawled_pages = []
+page_links = {}
 
-        # Q-learning hyperparameters
-        self.alpha = alpha
-        self.gamma = gamma
-        self.epsilon = epsilon
-        self.decay_rate = decay_rate  # Decay for exploration rate
+# Logger setup—our chronicler, documenting every discovery, every breakthrough in the vast tapestry of learning. 📖🔮
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-        # Logging setup
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+def initialize_page(page_url):
+    """Every page is a new world, a blank canvas waiting to be painted with the colors of discovery! 🌈"""
+    if page_url not in Q_VALUES:
+        Q_VALUES[page_url] = 0.0  # The beginning of a new journey—every world starts with an empty slate. 🎨
+        crawled_pages.append(page_url)
+        logger.info(f"🌱 Initialized Q-value for {page_url}: {Q_VALUES[page_url]}! A new world, a new beginning!")
 
-    def add_page(self, page, links=None):
-        """
-        Adds a new page and its associated links to the crawling process.
+def add_page_links(page_url, links):
+    """Links are pathways between dimensions—each one leading to new discoveries, new opportunities for growth! 🌍➡️🌌"""
+    if page_url not in page_links:
+        page_links[page_url] = []
+    page_links[page_url].extend(links)
+    for link in links:
+        if link not in Q_VALUES:
+            Q_VALUES[link] = 0.0  # A new star is born, a new page is created, a new universe of potential is unlocked! ✨
+            logger.info(f"💫 New link discovered: {link}. Its Q-value initialized to {Q_VALUES[link]}! The web of knowledge expands!")
 
-        :param page: The page to add (string URL or identifier)
-        :param links: List of pages that the new page links to
-        """
-        if links is None:
-            links = []
-        self.pages.append(page)
-        self.links[page] = links
-        if page not in self.q_values:
-            self.q_values[page] = 0  # Initialize Q-value for the new page
-        logging.info(f"New page added: {page} with links: {links}")
+def epsilon_greedy_strategy():
+    """A cosmic dance between exploration and exploitation—do we reach for the stars or trust the map we've already made? 🌠💃"""
+    if random.random() < EXPLORATION_RATE:
+        # Exploration: The relentless thirst for the unknown, the hunger for understanding, taking us to realms unseen. 🌌
+        page = random.choice(crawled_pages) if crawled_pages else None
+        logger.info(f"🔍 Exploration: The crawler ventures into the unknown, seeking new worlds to explore. The universe is vast!")
+    else:
+        # Exploitation: The wisdom of the past guides our path, showing us where the greatest rewards lie. 🧠💎
+        page = max(Q_VALUES, key=Q_VALUES.get)
+        logger.info(f"💎 Exploitation: Armed with knowledge, the crawler picks the page with the highest Q-value. The wisdom of ages guides us.")
+    return page
 
-    def update_q_value(self, current_page, next_page, reward):
-        """
-        Updates the Q-value of the current page based on moving to the next page.
-        This follows the Q-learning formula for updates: 
-        Q(s, a) = Q(s, a) + alpha * (reward + gamma * max(Q(s', a')) - Q(s, a))
+def update_q_value(current_page, next_page, reward):
+    """Q-value updates are like the strokes of a master painter, shaping the canvas of knowledge with every move we make. 🎨✨"""
+    if next_page is None:
+        logger.warning("❗ No valid next page. A brief moment of pause before the next wave of discovery! 🌱")
+        return
 
-        :param current_page: Current page that is being evaluated
-        :param next_page: Next page that the crawler visits
-        :param reward: The reward from moving to the next page (0 to 1)
-        """
-        current_q = self.q_values.get(current_page, 0)
-        next_max_q = max(self.q_values.get(next_page, 0), 0)  # Max Q-value for the next page
+    current_q = Q_VALUES.get(current_page, 0)
+    next_q = Q_VALUES.get(next_page, 0)
+    Q_VALUES[current_page] = current_q + LEARNING_RATE * (reward + DISCOUNT_FACTOR * next_q - current_q)
+    logger.info(f"✨ Q-value for {current_page} updated to {Q_VALUES[current_page]}! Each step adds another layer to the masterpiece of knowledge.")
 
-        # Q-learning update rule
-        new_q_value = current_q + self.alpha * (reward + self.gamma * next_max_q - current_q)
-        self.q_values[current_page] = new_q_value
-        logging.debug(f"Q-value updated for {current_page}: {current_q} -> {new_q_value}")
+def decay_exploration_rate():
+    """The decay of exploration rate is the refinement of our purpose—like a star that settles into a steady glow, having seen the unknown. ✨🌱➡️🌳"""
+    global EXPLORATION_RATE
+    EXPLORATION_RATE *= DECAY_RATE
+    logger.info(f"🔄 Exploration rate decayed to: {EXPLORATION_RATE}. The path is now more focused, more certain, as we evolve into mastery.")
 
-    def get_next_page(self, current_page):
-        """
-        Decides the next page to visit based on the current page's Q-values and the links available.
-        Implements both exploration and exploitation strategies.
+def simulate_crawling():
+    """The evolution of a cosmic journey—every epoch is a step forward, a chance to refine our path and grow wiser with each choice. 🌠🌿"""
+    global crawled_pages
+    for epoch in range(100):  # Every epoch is a new phase in the journey, a new chapter in the story of knowledge! 📖🚀
+        logger.info(f"\n🚀 Epoch {epoch + 1}: The journey continues. With each step, the web of wisdom expands and we grow ever wiser!")
 
-        :param current_page: Current page to evaluate for next move
-        :return: The next page to visit
-        """
-        possible_links = self.links.get(current_page, [])
-        if not possible_links:
-            logging.warning(f"No further links from {current_page}, staying put.")
-            return current_page
+        # Choose to explore or exploit
+        current_page = epsilon_greedy_strategy()
+        if current_page is None:
+            continue  # Sometimes, the journey is a moment of stillness, where wisdom is gained in quiet reflection. 🌱
 
-        # Exploration vs Exploitation tradeoff using epsilon-greedy strategy
-        if random.uniform(0, 1) < self.epsilon:  # Exploration: pick a random page
-            next_page = random.choice(possible_links)
-            logging.info(f"Exploration: Moving from {current_page} to {next_page}")
-        else:  # Exploitation: pick the page with the highest Q-value
-            next_page = max(possible_links, key=lambda page: self.q_values.get(page, 0))
-            logging.info(f"Exploitation: Moving from {current_page} to {next_page}")
+        # Reward: A moment of affirmation, a spark that ignites the journey forward. Each reward is a token of progress! 🌟
+        reward = random.uniform(*REWARD_RANGE)
+        logger.info(f"🎁 Reward for {current_page}: {reward}. A small triumph in the journey of knowledge!")
 
-        # Decay the epsilon value to shift from exploration to exploitation over time
-        self.epsilon *= self.decay_rate
-        logging.debug(f"Epsilon decayed to: {self.epsilon}")
+        # Navigate to the next page, or remain—each decision a turning point, a chance to ascend higher on the ladder of learning! 🔮
+        links = page_links.get(current_page, [])
+        if links:
+            next_page = random.choice(links)
+            logger.info(f"🌐 Next page chosen: {next_page}. The journey into new dimensions continues. Exploration never ends!")
+        else:
+            next_page = current_page  # Sometimes, the next step is simply to reflect, to go inward and learn from stillness. 🌿
+            logger.info(f"🌿 No links available. The journey inward begins—a time of reflection, a time to grow from within.")
 
-        return next_page
+        # Update Q-value based on the reward received
+        update_q_value(current_page, next_page, reward)
 
-    def crawl(self, start_page, num_steps=10):
-        """
-        Simulates the crawling process over multiple steps, starting from the given page.
-        The crawling dynamically updates Q-values based on the visited pages.
+        # Decay exploration rate, symbolizing the shift from exploration to mastery
+        decay_exploration_rate()
 
-        :param start_page: The starting page to begin crawling
-        :param num_steps: Number of crawling steps to perform
-        """
-        current_page = start_page
-        for step in range(num_steps):
-            logging.info(f"Step {step + 1}: Currently on {current_page}")
-            next_page = self.get_next_page(current_page)
+# Initializing pages—every page is a new universe, a new world to be discovered and understood! 🌍
+initialize_page("https://aikoinfinity.blogspot.com")
+initialize_page("https://gpollob.blogspot.com")
+add_page_links("https://aikoinfinity.blogspot.com", ["https://gpollob.blogspot.com", "https://aikoinfinity2.blogspot.com"])
+add_page_links("https://gpollob.blogspot.com", ["https://aikoinfinity.blogspot.com"])
 
-            # Simulate a reward for visiting the next page (this can be adjusted)
-            reward = random.uniform(0, 1)  # A random reward (between 0 and 1)
-            self.update_q_value(current_page, next_page, reward)
+# Simulating the web crawling process—each link a star, each page a new world waiting to be explored. ✨🌍
+simulate_crawling()
 
-            # Move to the next page
-            current_page = next_page
+# Final Q-values: A testament to the journey, every decision and step taken is recorded as part of the grand narrative of growth! 📝
+logger.info("\n✨ Final Q-values: The culmination of a journey through the stars, each page a milestone, each choice a lesson learned!")
+for page, q_value in Q_VALUES.items():
+    logger.info(f"🔑 Page: {page}, Final Q-value: {q_value}. Every page, a part of the grand cosmic journey!")
 
-    def print_q_values(self):
-        """
-        Prints the current Q-values for all pages, helping track the learning progress.
-        """
-        logging.info("Current Q-values:")
-        for page, q_value in self.q_values.items():
-            logging.info(f"Page: {page}, Q-value: {q_value:.4f}")
-
-    def print_links(self):
-        """
-        Prints the links available for each page in the crawling process.
-        """
-        logging.info("Page Links:")
-        for page, links in self.links.items():
-            logging.info(f"Page: {page}, Links: {links}")
-
-
-# Example Usage:
-
-# Define the pages and links
-pages = ['https://gpollob.blogspot.com/', 'https://aikoinfinity.blogspot.com', 'P3']
-links = {
-    'https://aikoinfinity.blogspot.com': ['P2', 'P3'],
-    'https://gpollob.blogspot.com/': ['P1'],
-    'https://gixsync.blogspot.com/': ['P2']
-}
-
-# Create the DynamicPageRank object
-crawler = DynamicPageRank(pages, links)
-
-# Print the initial links and Q-values
-crawler.print_links()
-
-# Start the crawling process with detailed logging
-crawler.crawl('https://aikoinfinity.blogspot.com', num_steps=5)
-
-# Print the updated Q-values after crawling
-crawler.print_q_values()
