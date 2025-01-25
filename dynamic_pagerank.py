@@ -1,112 +1,130 @@
 import random
 import logging
+import numpy as np
 
-# 🌟 Constants: These are the guiding stars, the fixed laws of the universe, setting the course for our adventure! 🌌
-# Each constant represents a force, a principle that shapes the journey and leads us toward greater discovery. 🌍✨
-const LEARNING_RATE = 0.1  # The cosmic velocity at which we absorb new knowledge! 🚀💡
-const DISCOUNT_FACTOR = 0.9  # The gravity of future rewards, guiding our steps toward the ultimate goal. 🌠🔮
-const EXPLORATION_RATE = 1.0  # The boundless curiosity that drives us into the unknown, forever seeking new frontiers! 🌌🌍
-const DECAY_RATE = 0.995  # The natural evolution from curiosity to mastery, as we refine our journey over time. ⏳✨
-const REWARD_RANGE = (0, 1)  # The spectrum of rewards, each one a beacon signaling progress on our path! 🌟🔑
+# Logging configuration for dynamic PageRank simulation
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# 🌌 Q-Values: These are the keys to the universe—our guideposts, revealing the value of every decision, every step taken. 🌍💫
-const Q_VALUES = {}
+# Parameters for PageRank and Q-learning dynamics
+LEARNING_RATE = 0.1  # Learning rate for Q-value updates
+DISCOUNT_FACTOR = 0.9  # Discount factor for future rewards
+EXPLORATION_RATE = 1.0  # Initial exploration rate (100% exploration)
+DECAY_RATE = 0.995  # Decay rate for exploration over time
+META_LEARNING_RATE = 0.01  # Learning rate for meta-learning process
 
-# 🔗 Crawled Pages & Links: The cosmic web we weave, every link a star, every page a world awaiting exploration. 🌠✨
-const crawled_pages = []
-const page_links = {}
+# Pages to crawl in the simulation (states)
+pages = ["home", "about", "contact", "blog", "services", "portfolio"]
 
-# 📖 Logger: Our chronicler, recording every twist and turn of the cosmic journey, capturing the story of our exploration! 🔮✨
-const logger = logging.getLogger(__name__)
+# Initialize Q-values for each page representing initial knowledge
+Q_VALUES = {page: 0 for page in pages}
 
-# 🔍 Function Definitions: These are our navigational tools, each one a step toward mastering the vast universe of knowledge. 🌌💎
+# External factors influencing the reward (e.g., user engagement)
+external_factors = {
+    "home": 1.0,  # Stable engagement factor for home page
+    "about": 0.8,
+    "contact": 0.5,
+    "blog": 0.9,
+    "services": 1.2,
+    "portfolio": 1.1,
+}
 
-def initialize_page(page_url):
-    """🌱 Initialization: Every new page is a fresh world, waiting to be explored and understood. A new star is born! 🌠"""
-    if page_url not in Q_VALUES:
-        Q_VALUES[page_url] = 0.0  # A blank canvas, a new galaxy to explore. 🌍
-        crawled_pages.append(page_url)
-        logger.info(f"🌱 Initialized Q-value for {page_url}: {Q_VALUES[page_url]}! A new world begins its journey!")
+# Dynamic reward based on both immediate importance and external factors
+def dynamic_reward(page):
+    """
+    Dynamically calculate the reward based on immediate importance and external user engagement factors.
+    The agent finds fun and quirky ways to reward certain pages.
+    """
+    base_rewards = {
+        "home": 10,
+        "about": 5,
+        "contact": 2,
+        "blog": 7,
+        "services": 8,
+        "portfolio": 9,
+    }
+    # Playfully adjust the reward based on external factors and a "fun" mood factor
+    fun_mood_factor = random.uniform(0.9, 1.1)  # Introducing fun factor into the reward
+    logger.info(f"🌈 Fun mood factor applied: {fun_mood_factor:.2f}")
+    return base_rewards.get(page, 0) * external_factors.get(page, 1.0) * fun_mood_factor
 
-def add_page_links(page_url, links):
-    """🔗 Links: Pathways between worlds, stars connecting to form a constellation of knowledge! 🌌✨"""
-    if page_url not in page_links:
-        page_links[page_url] = []
-    page_links[page_url].extend(links)
-    for link in links:
-        if link not in Q_VALUES:
-            Q_VALUES[link] = 0.0  # Another star emerges, a new link in the constellation of knowledge! 🌠
-            logger.info(f"💫 New link discovered: {link}. Its Q-value initialized to {Q_VALUES[link]}!")
-
+# Exploration vs. Exploitation Strategy (epsilon-greedy with reasoning and fun)
 def epsilon_greedy_strategy():
-    """⚖️ Exploration vs. Exploitation: A cosmic dance between the thrill of discovery and the wisdom of the known. 🌠💃"""
+    """
+    The strategy considers exploration and exploitation but also factors in a fun, unpredictable AI that 
+    takes curious, whimsical decisions along the way.
+    """
+    global EXPLORATION_RATE
     if random.random() < EXPLORATION_RATE:
-        # Exploration: A leap into the unknown, driven by the eternal curiosity of the explorer. 🌍🚀
-        page = random.choice(crawled_pages) if crawled_pages else None
-        logger.info(f"🔍 Exploration: A bold venture into uncharted territory. The universe is endless!")
+        # Exploration: The agent feels playful, just wants to roam around!
+        page = random.choice(pages)
+        logger.info(f"🎉 Exploration: Let's try something new! Visiting {page}.")
     else:
-        # Exploitation: Using our accumulated wisdom to make the best possible choice. 🌌💡
-        page = max(Q_VALUES, key=Q_VALUES.get)
-        logger.info(f"💎 Exploitation: Armed with knowledge, we choose the page with the highest Q-value!")
+        # Exploitation: The agent is feeling confident and applies its learned knowledge
+        weighted_q_values = {page: Q_VALUES[page] * external_factors.get(page, 1.0) for page in pages}
+        page = max(weighted_q_values, key=weighted_q_values.get)
+        logger.info(f"🚀 Exploitation: Confidently heading to {page} based on what I know!")
+    
     return page
 
-def update_q_value(current_page, next_page, reward):
-    """🎨 Updating Q-values: Each stroke of the brush refines our understanding, shaping the grand masterpiece of learning. 🌌🎨"""
-    if next_page is None:
-        logger.warning("❗ No valid next page. A brief pause before the next wave of discovery!")
-        return
+# Meta-learning: Adjusting the exploration rate based on long-term optimization goals
+def meta_learning_adjustment():
+    """
+    The agent knows it has to grow, so it adjusts its exploration rate to balance out curiosity and smart decision-making.
+    """
+    global EXPLORATION_RATE
+    exploration_change = META_LEARNING_RATE * (1 - EXPLORATION_RATE)
+    EXPLORATION_RATE += exploration_change  # The agent is getting wiser
+    logger.info(f"🔄 Meta-learning adjustment: Exploration rate updated to {EXPLORATION_RATE}.")
 
+# Update Q-value with reasoning, considering both immediate reward and future outcomes
+def update_q_value(current_page, next_page, reward):
+    """
+    Update Q-values with deeper reasoning, considering fun dynamics and long-term implications.
+    The agent is evolving and improving its strategies based on long-term rewards.
+    """
     current_q = Q_VALUES.get(current_page, 0)
     next_q = Q_VALUES.get(next_page, 0)
-    Q_VALUES[current_page] = current_q + LEARNING_RATE * (reward + DISCOUNT_FACTOR * next_q - current_q)
-    logger.info(f"✨ Q-value for {current_page} updated to {Q_VALUES[current_page]}! Each step adds another layer to the cosmic canvas of knowledge.")
 
+    # The agent learns to reason about rewards and incorporate its own fun logic
+    Q_VALUES[current_page] = current_q + LEARNING_RATE * (reward + DISCOUNT_FACTOR * next_q - current_q)
+    logger.info(f"✨ Updated Q-value for {current_page}: {Q_VALUES[current_page]}.")
+
+# Decay the exploration rate over time to shift focus towards optimal strategies
 def decay_exploration_rate():
-    """🌿 Decay of Exploration: The refinement of our journey, a shift from endless curiosity to deep, purposeful mastery. 🌱➡️🌳"""
+    """
+    The exploration rate is decayed as the agent matures, but it still keeps a bit of curiosity.
+    """
     global EXPLORATION_RATE
     EXPLORATION_RATE *= DECAY_RATE
-    logger.info(f"🔄 Exploration rate decayed to: {EXPLORATION_RATE}. A more focused path forward, as we evolve into mastery.")
+    logger.info(f"🔄 Exploration rate decayed to: {EXPLORATION_RATE}.")
 
-def simulate_crawling():
-    """🌌 Simulation: A cosmic saga unfolds with each epoch—a journey where every choice, every decision leads us forward! 🌠🚀"""
-    global crawled_pages
-    for epoch in range(100):  # Each epoch, a chapter in the epic journey of discovery! 📖✨
-        logger.info(f"\n🚀 Epoch {epoch + 1}: The adventure continues. With each step, the web of wisdom grows!")
+# Main simulation loop: learning from the web's digital landscape with a dash of fun!
+def crawl_website():
+    """
+    Simulate the website crawling process, incorporating deep reasoning, fun, and curiosity at each step to 
+    improve the agent's decision-making. The agent learns, adjusts, and refines its strategy based on immediate 
+    and long-term goals while having fun in the process!
+    """
+    for step in range(10):  # Simulate 10 steps of exploration and learning
+        logger.info(f"\nStep {step + 1}:")
+        current_page = epsilon_greedy_strategy()  # Choose next page with fun reasoning
+        reward = dynamic_reward(current_page)  # Calculate dynamic reward considering external factors and fun
+        logger.info(f"🎯 Crawled {current_page}, received reward: {reward}")
+        
+        # Simulate moving to the next page (could be influenced by reasoning or randomness)
+        next_page = random.choice(pages)
+        update_q_value(current_page, next_page, reward)  # Update Q-values based on reasoning
 
-        # Explore or exploit? The eternal decision, where the unknown meets the known in a cosmic dance! 💃🌌
-        current_page = epsilon_greedy_strategy()
-        if current_page is None:
-            continue  # In moments of stillness, we reflect and prepare for the next phase of the journey! 🌿
+        meta_learning_adjustment()  # Adjust exploration rate based on reasoning and fun
 
-        # Reward: A symbol of progress, a token affirming our journey toward enlightenment! 🎁🌠
-        reward = random.uniform(*REWARD_RANGE)
-        logger.info(f"🎁 Reward for {current_page}: {reward}. A small triumph on the journey to mastery!")
+        decay_exploration_rate()  # Decay the exploration rate as learning progresses
 
-        # The next page, a new world, a new opportunity for growth and learning. 🌍🌠
-        links = page_links.get(current_page, [])
-        if links:
-            next_page = random.choice(links)
-            logger.info(f"🌐 Next page chosen: {next_page}. The journey into new dimensions continues!")
-        else:
-            next_page = current_page  # The inward journey begins—a time to reflect, a time to learn from within. 🌿
-            logger.info(f"🌿 No links available. The journey inward starts.")
+    # Final summary: Reflect on what the agent has learned with a fun, whimsical touch
+    logger.info("\n✨ Final Q-values after deep reasoning process with fun:")
+    for page, q_value in Q_VALUES.items():
+        logger.info(f"🔑 Page: {page}, Final Q-value: {q_value}.")
 
-        # Update Q-value based on the reward and next page—each step is a brushstroke refining our masterpiece. 🎨✨
-        update_q_value(current_page, next_page, reward)
-
-        # Decay the exploration rate—mastery is near! 🌱➡️🌳
-        decay_exploration_rate()
-
-# 🌍 Initializing pages: Each page, a new universe, a new opportunity to expand the horizon of knowledge! 🌠✨
-initialize_page("https://aikoinfinity.blogspot.com")
-initialize_page("https://gpollob.blogspot.com")
-add_page_links("https://aikoinfinity.blogspot.com", ["https://gpollob.blogspot.com", "https://aikoinfinity2.blogspot.com"])
-add_page_links("https://gpollob.blogspot.com", ["https://aikoinfinity.blogspot.com"])
-
-# 🚀 Simulating the crawl: Each epoch a new chapter in the unfolding cosmic journey of learning. 🌌✨
-simulate_crawling()
-
-# ✨ Final Q-values: The culmination of this cosmic journey, where each page reflects a milestone in the ever-expanding universe of wisdom. 📖💫
-logger.info("\n✨ Final Q-values: The story of the journey, each decision shaping the future!")
-for page, q_value in Q_VALUES.items():
-    logger.info(f"🔑 Page: {page}, Final Q-value: {q_value}. Every page a part of the grand cosmic adventure!")
+# Execute the enhanced crawling process
+if __name__ == "__main__":
+    crawl_website()
