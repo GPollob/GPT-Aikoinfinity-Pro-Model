@@ -1,0 +1,7 @@
+model = tf.keras.models.load_model(
+       'gpt-aikoinfinity.h5',
+       custom_objects={
+           'QuantumLayer': QuantumLayer,
+           'EthicalAlignmentLoss': EthicalAlignmentLoss
+       }
+   )
